@@ -18,6 +18,8 @@ public class selectiveRepeatedARQserver {
     static boolean timeOutFlag[] = new boolean[10000];
     static boolean negativeAcknowledgement[] = new boolean[10000];
     static boolean negativeAcknowledgementPrint[] = new boolean[10000];
+    static boolean lostMsgPrint[] = new boolean[10000];
+    static boolean receiveMsgPrint[] = new boolean[10000];
     static long timer[] = new long[10000];
     static String input;
     static int windowLeft;
@@ -150,6 +152,10 @@ class receive extends Thread
                     synchronized (this) {
                         for (int i = selectiveRepeatedARQserver.windowLeft; i <= tmp; i++) {
                             selectiveRepeatedARQserver.acknowledgement[i] = true;
+                            if(!selectiveRepeatedARQserver.receiveMsgPrint[i]) {
+                                System.out.println("Received : " + i);
+                                selectiveRepeatedARQserver.receiveMsgPrint[i] = true;
+                            }
                         }
                     }
                 } else {
@@ -157,6 +163,10 @@ class receive extends Thread
                         int tmp = Integer.parseInt(ar[1]);
                         selectiveRepeatedARQserver.sendFlag[tmp] = false;
                         selectiveRepeatedARQserver.negativeAcknowledgement[tmp] = true;
+                        if(!selectiveRepeatedARQserver.lostMsgPrint[tmp]) {
+                            System.out.println("Lost: " + tmp);
+                            selectiveRepeatedARQserver.lostMsgPrint[tmp] = true;
+                        }
                     }
                 }
             } catch (IOException e) {
