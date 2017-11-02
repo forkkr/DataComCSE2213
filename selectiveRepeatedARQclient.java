@@ -1,3 +1,5 @@
+import jdk.nashorn.internal.ir.IdentNode;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileWriter;
@@ -17,6 +19,7 @@ public class selectiveRepeatedARQclient {
     static boolean receivedFlag[] = new boolean[10000];
     static String receivedFrame[] = new String[10000];
     static boolean acknowledgementSendFlag[] = new boolean[10000];
+    static boolean lostSendFlag[] = new boolean[10000];
     static int receiveWindowLeft;
     static int receiveWindowRight;
     static int receiveWindowSize = 8;
@@ -55,6 +58,7 @@ public class selectiveRepeatedARQclient {
             {
                 if(ending)
                     break;
+            //  System.out.println("Received: "+receiveWindowLeft);
                 out.writeUTF("ac"+"#"+(receiveWindowLeft-1));
                 out.flush();
             }
@@ -62,7 +66,8 @@ public class selectiveRepeatedARQclient {
                 if(ending) {
                     break;
                 }
-                System.out.println("Lost: "+receiveWindowLeft);
+            //    System.out.println("ending !!!");
+           //     System.out.println("Lost: "+receiveWindowLeft);
             out.writeUTF("wa"+"#"+receiveWindowLeft);
             out.flush();
             }
@@ -74,8 +79,8 @@ public class selectiveRepeatedARQclient {
             }
 
         }
-        System.out.println("ending !!!");
-        System.out.println("Total: "+totalReceivedFrameCounter);
+      //  System.out.println("ending !!!");
+       // System.out.println("Total: "+totalReceivedFrameCounter);
         fileWriting();
     }
     static void fileWriting() throws IOException {
@@ -127,7 +132,9 @@ class receiveFromServer extends Thread
                 }
                 if (selectiveRepeatedARQclient.frameReceivedCounter < 4) {
                     frameWriting(msg);
+                    selectiveRepeatedARQclient.frameReceivedCounter++;
                 } else {
+                    lostMsgSending(msg);
                     selectiveRepeatedARQclient.frameReceivedCounter = 0;
                 }
             } catch (IOException e) {
@@ -141,9 +148,19 @@ class receiveFromServer extends Thread
         int tmp = Integer.parseInt(ar[0]);
         if(!selectiveRepeatedARQclient.receivedFlag[tmp]) {
             selectiveRepeatedARQclient.totalReceivedFrameCounter++;
-            System.out.println("Recieved: " + ar[1]);
+            System.out.println("Recieved: " + ar[1] +" "+tmp);
         }
         selectiveRepeatedARQclient.receivedFlag[tmp] = true;
         selectiveRepeatedARQclient.receivedFrame[tmp] = ar[1];
+    }
+    void lostMsgSending(String msg)
+    {
+        String ar[] = msg.split("#");
+        int tmp = Integer.parseInt(ar[0]);
+        if(!selectiveRepeatedARQclient.lostSendFlag[tmp] && !selectiveRepeatedARQclient.receivedFlag[tmp])
+        {
+            System.out.println("Lost: "+ar[1]+" "+tmp);
+            selectiveRepeatedARQclient.lostSendFlag[tmp] = true;
+        }
     }
 }
