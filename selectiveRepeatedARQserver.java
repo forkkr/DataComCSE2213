@@ -15,6 +15,9 @@ public class selectiveRepeatedARQserver {
     static FileWriter write;
     static boolean acknowledgement[] = new boolean[10000];
     static boolean sendFlag[] = new boolean[10000];
+    static boolean timeOutFlag[] = new boolean[10000];
+    static boolean negativeAcknowledgement[] = new boolean[10000];
+    static boolean negativeAcknowledgementPrint[] = new boolean[10000];
     static long timer[] = new long[10000];
     static String input;
     static int windowLeft;
@@ -49,14 +52,18 @@ public class selectiveRepeatedARQserver {
         windowRight = 0;
         while(true)
         {
-            long startTime = System.currentTimeMillis();
+            long current = System.currentTimeMillis();
             while((windowRight-windowLeft+1) < windowSize && windowRight < frameCounter)
             {
                 windowRight++;
+                if(frame[windowRight]!=null)
                 out.writeUTF(frame[windowRight]);
                 out.flush();
                 sendFlag[windowRight] = true;
-                timer[windowRight] = startTime + 1000;
+                timer[windowRight] = current + 100;
+                System.out.println("Start Time for "+ windowRight + ": "+current);
+                timeOutFlag[windowRight] = false;
+                negativeAcknowledgement[windowRight] = false;
             }
             while(acknowledgement[windowLeft])
             {
@@ -64,8 +71,10 @@ public class selectiveRepeatedARQserver {
             }
             for(int i = windowLeft; i<= windowRight; i++)
             {
-                if(!acknowledgement[i] && timer[i] > startTime)
+                if(!acknowledgement[i] && timer[i] < current && !timeOutFlag[i])
                 {
+                    System.out.println("Time Out Occured. for "+ i +" At : "+timer[i]);
+                    timeOutFlag[i] = true;
                     sendFlag[i] = false;
                 }
             }
@@ -73,8 +82,20 @@ public class selectiveRepeatedARQserver {
             {
                 if(sendFlag[i]==false)
                 {
+                    if(frame[i]!=null)
                     out.writeUTF(frame[i]);
                     out.flush();
+                   // timeOutFlag[i] = false;
+                    negativeAcknowledgement[i] = false;
+                }
+            }
+            for(int i = windowLeft; i <= windowRight; i++)
+            {
+                if(!negativeAcknowledgementPrint[i]&&negativeAcknowledgement[i]==true && !acknowledgement[i])
+                {
+                    System.out.println("Negative Acknowledgement from "+i);
+                    negativeAcknowledgement[i] = false;
+                    negativeAcknowledgementPrint[i] = true;
                 }
             }
             if(windowLeft==frameCounter)
@@ -135,6 +156,7 @@ class receive extends Thread
                     synchronized (this) {
                         int tmp = Integer.parseInt(ar[1]);
                         selectiveRepeatedARQserver.sendFlag[tmp] = false;
+                        selectiveRepeatedARQserver.negativeAcknowledgement[tmp] = true;
                     }
                 }
             } catch (IOException e) {
